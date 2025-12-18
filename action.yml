@@ -236,8 +236,10 @@ runs:
     - name: Get Metadata
       id: get-metadata
       shell: bash
+      env:
+        DOCKER_METADATA: ${{ steps.docker-build-push-action.outputs.metadata }}
       run: |
-        metadata=$(echo '${{ steps.docker-build-push-action.outputs.metadata }}' | jq -c)
+        metadata=$(echo "$DOCKER_METADATA" | jq -c)
         echo "metadata=$metadata" >> $GITHUB_OUTPUT
         echo "## Docker Image Metadata" >> $GITHUB_STEP_SUMMARY
         echo '```json' >> $GITHUB_STEP_SUMMARY
