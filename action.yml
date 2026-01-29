@@ -196,8 +196,8 @@ runs:
             CACHE_TAG="${{ github.ref_name }}"
           fi
           
-          BASE_IMAGE="${{ steps.image_name.outputs.image_name }}"
-          
+          BASE_IMAGE="${{ inputs.registry }}/${{ steps.image_name.outputs.image_name }}"
+
           echo "from=type=registry,ref=${BASE_IMAGE}:cache-${CACHE_TAG}" >> $GITHUB_OUTPUT
           echo "to=type=registry,ref=${BASE_IMAGE}:cache-${CACHE_TAG},mode=max,image-manifest=true,oci-mediatypes=true" >> $GITHUB_OUTPUT
         else
