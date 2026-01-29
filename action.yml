@@ -183,21 +183,28 @@ runs:
         input: ${{ steps.meta.outputs.json }}
         script: '.tags | ( first / ":") | .[length -1]'
 
-    # - name: Set cache from
-    #   id: cache_from
-    #   shell: bash
-    #   run: |
-    #     if [ "${{ inputs.cache-from }}" = "" && "${{inputs.ecr-cache}}" = "true" ]; then
-    #       echo 'cache_from=mode=max,image-manifest=true,oci-mediatypes=true,type=registry,ref=${{ inputs.registry }}/${{ inputs.organization }}/${{ inputs.repository }}:cache-${{ steps.tag.outputs.tags }}' >> "$GITHUB_OUTPUT"
-    #     fi
-
-    - name: Debug GitHub context
+    - name: Determine cache strategy
+      id: cache
       shell: bash
       run: |
-        echo "ref: ${{ github.ref }}"
-        echo "ref_name: ${{ github.ref_name }}"
-        echo "ref_type: ${{ github.ref_type }}"
-        echo "event_name: ${{ github.event_name }}"
+        if [[ "${{ inputs.ecr-cache }}" == "true" ]]; then
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # follows docker pr tag (e.g. pr-123)
+            CACHE_TAG="pr-${{ github.event.pull_request.number }}"
+          else
+            # allows for release version (e.g. v1.1.1) and `main` branch
+            CACHE_TAG="${{ github.ref_name }}"
+          fi
+          
+          BASE_IMAGE="${{ steps.image_name.outputs.image_name }}"
+          
+          echo "from=type=registry,ref=${BASE_IMAGE}:cache-${CACHE_TAG}" >> $GITHUB_OUTPUT
+          echo "to=type=registry,ref=${BASE_IMAGE}:cache-${CACHE_TAG},mode=max,image-manifest=true,oci-mediatypes=true" >> $GITHUB_OUTPUT
+        else
+          # Set default outputs when ecr cache is unused
+          echo "from=${{ inputs.cache-from }}" >> $GITHUB_OUTPUT
+          echo "to=${{ inputs.cache-to }}"" >> $GITHUB_OUTPUT
+        fi
 
     # docker context must be created prior to setting up Docker Buildx
     # https://github.com/actions-runner-controller/actions-runner-controller/issues/893
@@ -243,8 +250,8 @@ runs:
         ssh: ${{ inputs.ssh }}
         build-args: ${{ inputs.build-args }}
         build-contexts: ${{ inputs.build-contexts }}
-        cache-from: ${{ inputs.cache-from }}
-        cache-to: ${{ inputs.cache-to }}
+        cache-from: ${{ steps.cache.outputs.from }}
+        cache-to: ${{ steps.cache.outputs.to }}
         no-cache: ${{ inputs.no-cache }}
         tags: ${{ steps.meta.outputs.tags }}
         target: ${{ inputs.target }}
