@@ -203,7 +203,7 @@ runs:
         else
           # Set default outputs when ecr cache is unused
           echo "from=${{ inputs.cache-from }}" >> $GITHUB_OUTPUT
-          echo "to=${{ inputs.cache-to }}"" >> $GITHUB_OUTPUT
+          echo "to=${{ inputs.cache-to }}" >> $GITHUB_OUTPUT
         fi
 
     # docker context must be created prior to setting up Docker Buildx
