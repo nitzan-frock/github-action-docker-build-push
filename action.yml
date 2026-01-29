@@ -69,6 +69,10 @@ inputs:
     description: 'Docker password'
     required: false
     default: ''
+  ecr-cache:
+    description: "Set to `true` to use Amazon ECR as the build cache"
+    required: false
+    default: false
   cache-from:
     description: "List of external cache sources for buildx (e.g., user/app:cache, type=local,src=path/to/dir)"
     required: false
@@ -128,6 +132,7 @@ runs:
         else
           echo 'image_name=${{inputs.image_name}}' >> "$GITHUB_OUTPUT"
         fi
+        
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -177,6 +182,22 @@ runs:
         raw-output: true
         input: ${{ steps.meta.outputs.json }}
         script: '.tags | ( first / ":") | .[length -1]'
+
+    # - name: Set cache from
+    #   id: cache_from
+    #   shell: bash
+    #   run: |
+    #     if [ "${{ inputs.cache-from }}" = "" && "${{inputs.ecr-cache}}" = "true" ]; then
+    #       echo 'cache_from=mode=max,image-manifest=true,oci-mediatypes=true,type=registry,ref=${{ inputs.registry }}/${{ inputs.organization }}/${{ inputs.repository }}:cache-${{ steps.tag.outputs.tags }}' >> "$GITHUB_OUTPUT"
+    #     fi
+
+    - name: Debug GitHub context
+      shell: bash
+      run: |
+        echo "ref: ${{ github.ref }}"
+        echo "ref_name: ${{ github.ref_name }}"
+        echo "ref_type: ${{ github.ref_type }}"
+        echo "event_name: ${{ github.event_name }}"
 
     # docker context must be created prior to setting up Docker Buildx
     # https://github.com/actions-runner-controller/actions-runner-controller/issues/893
@@ -250,7 +271,7 @@ runs:
 
     - name: Docker Inspect
       id: inspect
-      if:  ${{ inputs.inspect }} == 'true'
+      if:  ${{ inputs.inspect == 'true' }}
       shell: bash
       run: |
         docker pull "${{ inputs.registry }}/${{ steps.image_name.outputs.image_name }}:${{ steps.tag.outputs.output }}"
